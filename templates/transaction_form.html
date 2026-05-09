@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Tambah Transaksi{% endblock %}
+{% block page_title %}Tambah Transaksi{% endblock %}
+{% block content %}
+<div style="max-width:660px">
+  <div class="page-header">
+    <div>
+      <div class="page-heading">Transaksi Baru</div>
+      <div class="page-sub">Catat pembelian, penjualan, atau penyesuaian stok</div>
+    </div>
+    <a href="{{ url_for('transactions') }}" class="btn btn-secondary">← Kembali</a>
+  </div>
+
+  <!-- Scanner barcode -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <span class="card-title">📷 Scanner Barcode / Ketik Kode</span>
+      <span class="text-muted">Scan atau ketik SKU/barcode produk</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="search-bar" style="flex:1;min-width:200px">
+          <span>🔍</span>
+          <input type="text" id="scanInput" placeholder="Scan barcode atau ketik SKU, lalu Enter..."
+                 autocomplete="off" autofocus/>
+        </div>
+        <button type="button" class="btn btn-amber" onclick="lookupBarcode()">🔎 Cari</button>
+      </div>
+      <div id="scanResult" style="display:none;margin-top:12px;padding:12px 14px;background:var(--green-light);border:1px solid #a7f3d0;border-radius:8px;font-size:13px;color:#065f46">
+        ✓ Produk ditemukan: <strong id="scanName"></strong> — Stok: <strong id="scanStock"></strong>
+      </div>
+      <div id="scanError" style="display:none;margin-top:12px;padding:12px 14px;background:var(--red-light);border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#991b1b">
+        ✕ Produk tidak ditemukan. Coba SKU atau barcode lain.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" id="txForm">
+        <div class="form-group">
+          <label class="form-label">Tipe Transaksi *</label>
+          <select name="type" class="form-control form-select" required id="txType" onchange="updatePriceLabel()">
+            <option value="">-- Pilih Tipe --</option>
+            <option value="purchase">📥 Pembelian (Stok Masuk)</option>
+            <option value="sale">📤 Penjualan (Stok Keluar)</option>
+            <option value="adjustment">🔧 Penyesuaian Stok</option>
+            <option value="return">↩ Retur dari Pelanggan</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Produk *</label>
+          <select name="product_id" class="form-control form-select" required id="prodSelect" onchange="onProductChange()">
+            <option value="">-- Pilih Produk --</option>
+            {% for p in products %}
+            <option value="{{ p.id }}" data-stock="{{ p.current_stock }}" data-unit="{{ p.unit }}"
+                    data-price="{{ p.selling_price }}" data-cost="{{ p.avg_cost }}">
+              {{ p.name }} (Stok: {{ p.current_stock }} {{ p.unit }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="stockInfo" style="display:none;background:var(--blue-light);border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#1e40af">
+          Stok saat ini: <strong id="curStock">-</strong>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Jumlah *</label>
+            <input type="number" name="qty" class="form-control" id="qtyInput"
+                   step="0.001" min="0.001" required placeholder="0" oninput="calcTotal()"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="priceLabel">Harga Satuan (Rp) *</label>
+            <input type="number" name="unit_price" class="form-control" id="priceInput"
+                   step="100" min="0" required placeholder="0" oninput="calcTotal()"/>
+          </div>
+        </div>
+
+        <div style="background:var(--slate-50);border:1.5px solid var(--slate-200);border-radius:8px;padding:12px 16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--slate-500)">Estimasi Total</span>
+            <span style="font-size:20px;font-weight:800;color:var(--slate-800)" id="totalPreview">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Catatan (Opsional)</label>
+          <input type="text" name="note" class="form-control" placeholder="cth: Supplier X, No. Invoice 001"/>
+        </div>
+
+        <div class="btn-group" style="margin-top:8px">
+          <button type="submit" class="btn btn-primary">💾 Simpan Transaksi</button>
+          <a href="{{ url_for('transactions') }}" class="btn btn-secondary">Batal</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function onProductChange(){
+  const sel=document.getElementById('prodSelect');
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt.value){document.getElementById('stockInfo').style.display='none';return}
+  document.getElementById('curStock').textContent=opt.dataset.stock+' '+opt.dataset.unit;
+  document.getElementById('stockInfo').style.display='block';
+  const t=document.getElementById('txType').value;
+  document.getElementById('priceInput').value=t==='purchase'?opt.dataset.cost:opt.dataset.price;
+  calcTotal();
+}
+function updatePriceLabel(){
+  const t=document.getElementById('txType').value;
+  const labels={purchase:'Harga Beli Satuan (Rp)',sale:'Harga Jual Satuan (Rp)',adjustment:'Harga Satuan (Rp)',return:'Harga Satuan (Rp)'};
+  document.getElementById('priceLabel').textContent=labels[t]||'Harga Satuan (Rp)';
+  onProductChange();
+}
+function calcTotal(){
+  const qty=parseFloat(document.getElementById('qtyInput').value)||0;
+  const price=parseFloat(document.getElementById('priceInput').value)||0;
+  document.getElementById('totalPreview').textContent='Rp '+(qty*price).toLocaleString('id-ID');
+}
+document.getElementById('qtyInput').addEventListener('input',calcTotal);
+
+function lookupBarcode(){
+  const code=document.getElementById('scanInput').value.trim();
+  if(!code)return;
+  fetch('/api/barcode/'+encodeURIComponent(code))
+    .then(r=>r.json())
+    .then(data=>{
+      document.getElementById('scanResult').style.display='none';
+      document.getElementById('scanError').style.display='none';
+      if(data.found){
+        document.getElementById('scanName').textContent=data.name;
+        document.getElementById('scanStock').textContent=data.current_stock+' '+data.unit;
+        document.getElementById('scanResult').style.display='block';
+        // Auto-pilih produk di dropdown
+        const sel=document.getElementById('prodSelect');
+        for(let i=0;i<sel.options.length;i++){
+          if(sel.options[i].value==data.id){sel.selectedIndex=i;break}
+        }
+        onProductChange();
+      } else {
+        document.getElementById('scanError').style.display='block';
+      }
+    }).catch(()=>{document.getElementById('scanError').style.display='block'});
+}
+
+// Enter key di scan input
+document.getElementById('scanInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();lookupBarcode();}
+});
+</script>
+{% endblock %}

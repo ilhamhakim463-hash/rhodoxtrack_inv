@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Transaksi{% endblock %}
+{% block page_title %}Transaksi{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-heading">Transaksi Stok</div>
+    <div class="page-sub">Riwayat mutasi masuk dan keluar barang</div>
+  </div>
+  <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">＋ Tambah Transaksi</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="padding:12px 16px">
+    <form method="GET" class="filter-bar">
+      <div class="search-bar" style="flex:1;min-width:180px">
+        <span>🔍</span>
+        <input type="text" name="q" value="{{ q }}" placeholder="Cari produk..."/>
+      </div>
+      <select name="type" class="form-control form-select" style="width:auto">
+        <option value="">Semua Tipe</option>
+        <option value="purchase" {% if tx_type=='purchase' %}selected{% endif %}>📥 Pembelian</option>
+        <option value="sale"     {% if tx_type=='sale'     %}selected{% endif %}>📤 Penjualan</option>
+        <option value="adjustment" {% if tx_type=='adjustment' %}selected{% endif %}>🔧 Penyesuaian</option>
+        <option value="return"   {% if tx_type=='return'   %}selected{% endif %}>↩ Retur</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <a href="{{ url_for('transactions') }}" class="btn btn-secondary">Reset</a>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">📋 Riwayat Transaksi ({{ txs|length }})</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Produk</th><th>Tipe</th><th>Qty</th><th>Harga Satuan</th><th>Total</th><th>Operator</th><th>Catatan</th><th>Waktu</th></tr>
+      </thead>
+      <tbody>
+        {% for tx in txs %}
+        <tr>
+          <td class="mono" style="color:var(--slate-400)">#{{ tx.id }}</td>
+          <td style="font-weight:600">{{ tx.product.name }}</td>
+          <td>
+            {% if tx.type=='purchase' %}<span class="badge blue">📥 Beli</span>
+            {% elif tx.type=='sale' %}<span class="badge green">📤 Jual</span>
+            {% elif tx.type=='return' %}<span class="badge amber">↩ Retur</span>
+            {% else %}<span class="badge slate">🔧 Adj</span>{% endif %}
+          </td>
+          <td class="mono" style="font-weight:700">{{ "{:,.3f}".format(tx.qty|abs) }} {{ tx.product.unit }}</td>
+          <td class="mono">Rp{{ "{:,.0f}".format(tx.unit_price) }}</td>
+          <td class="mono" style="font-weight:700">Rp{{ "{:,.0f}".format(tx.total_price) }}</td>
+          <td><span class="badge {% if tx.user.role=='admin' %}blue{% else %}slate{% endif %}">{{ tx.user.username }}</span></td>
+          <td style="color:var(--slate-400);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tx.note or '-' }}</td>
+          <td style="color:var(--slate-400);font-size:11.5px;white-space:nowrap">{{ tx.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center;padding:36px;color:var(--slate-400)">Tidak ada transaksi</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

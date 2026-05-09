@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Laporan HPP{% endblock %}
+{% block page_title %}Laporan HPP{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-heading">Laporan Harga Pokok Penjualan</div>
+    <div class="page-sub">HPP = Stok Awal + Pembelian Bersih − Stok Akhir (Metode Weighted Average)</div>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('export_excel') }}" class="btn btn-success">📊 Export Excel</a>
+    <a href="{{ url_for('export_json') }}" class="btn btn-secondary">⬇ JSON</a>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:20px">
+  <div class="stat-card blue">
+    <div class="stat-icon">📦</div>
+    <div class="stat-label">Total Nilai HPP</div>
+    <div class="stat-value" style="font-size:18px">Rp {{ "{:,.0f}".format(total_hpp) }}</div>
+    <div class="stat-sub">harga pokok semua stok</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon">💵</div>
+    <div class="stat-label">Potensi Nilai Jual</div>
+    <div class="stat-value" style="font-size:18px">Rp {{ "{:,.0f}".format(total_value) }}</div>
+    <div class="stat-sub">bila semua stok terjual</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon">📈</div>
+    <div class="stat-label">Potensi Laba Kotor</div>
+    <div class="stat-value" style="font-size:18px">Rp {{ "{:,.0f}".format(total_value - total_hpp) }}</div>
+    <div class="stat-sub">selisih jual − HPP</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">📊 Rincian HPP per Produk</span>
+    <span class="text-muted">{{ hpp_data|length }} produk aktif</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Produk</th><th>Stok</th><th>HPP Rata-rata</th><th>Total HPP</th><th>Harga Jual</th><th>Margin</th><th>Nilai Jual</th></tr>
+      </thead>
+      <tbody>
+        {% for r in hpp_data %}
+        <tr>
+          <td style="font-weight:600">{{ r.product_name }}</td>
+          <td class="mono">{{ "{:,.3f}".format(r.current_stock) }}</td>
+          <td class="mono">Rp{{ "{:,.0f}".format(r.avg_cost) }}</td>
+          <td class="mono" style="font-weight:700">Rp{{ "{:,.0f}".format(r.total_hpp) }}</td>
+          <td class="mono">Rp{{ "{:,.0f}".format(r.selling_price) }}</td>
+          <td style="font-weight:700;color:{% if r.margin_pct>=20 %}var(--green){% elif r.margin_pct>=10 %}var(--amber){% elif r.margin_pct>0 %}var(--red){% else %}var(--slate-400){% endif %}">
+            {{ r.margin_pct }}%
+          </td>
+          <td class="mono">Rp{{ "{:,.0f}".format(r.current_stock * r.selling_price) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;padding:36px;color:var(--slate-400)">Tidak ada data</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--slate-50)">
+          <td colspan="3" style="font-weight:700;padding:11px 12px">Total</td>
+          <td class="mono" style="font-weight:800;color:var(--blue)">Rp{{ "{:,.0f}".format(total_hpp) }}</td>
+          <td></td><td></td>
+          <td class="mono" style="font-weight:800;color:var(--green)">Rp{{ "{:,.0f}".format(total_value) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

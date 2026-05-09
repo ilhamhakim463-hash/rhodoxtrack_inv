@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Kategori{% endblock %}
+{% block page_title %}Kategori{% endblock %}
+{% block content %}
+<div style="max-width:780px">
+  <div class="page-header">
+    <div>
+      <div class="page-heading">Manajemen Kategori</div>
+      <div class="page-sub">Tambah, edit, atau hapus kategori produk</div>
+    </div>
+  </div>
+  <div class="card mb-4">
+    <div class="card-header"><span class="card-title">➕ Tambah Kategori Baru</span></div>
+    <div class="card-body">
+      <form method="POST" style="display:flex;gap:10px;flex-wrap:wrap">
+        <input type="hidden" name="action" value="add"/>
+        <input type="text" name="name" class="form-control" placeholder="Nama kategori baru..." required style="flex:1;min-width:180px"/>
+        <button type="submit" class="btn btn-primary">Tambah</button>
+      </form>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Daftar Kategori ({{ categories|length }})</span>
+      <span class="text-muted">Klik Edit untuk ubah nama</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th style="width:48px">#</th><th>Nama Kategori</th><th>Produk Aktif</th><th>Aksi</th></tr>
+        </thead>
+        <tbody>
+          {% for c in categories %}
+          {% set active_count = c.products|selectattr('is_active')|list|length %}
+          <tr>
+            <td class="mono" style="color:var(--slate-400)">{{ c.id }}</td>
+            <td>
+              <div class="view-row" id="view-{{ c.id }}">
+                <span style="font-weight:600">{{ c.name }}</span>
+              </div>
+              <form class="edit-form" id="edit-form-{{ c.id }}" method="POST">
+                <input type="hidden" name="action" value="edit"/>
+                <input type="hidden" name="cat_id" value="{{ c.id }}"/>
+                <input type="text" name="new_name" class="form-control" value="{{ c.name }}" style="max-width:220px" required/>
+                <button type="submit" class="btn btn-success btn-sm">✓</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit({{ c.id }})">✕</button>
+              </form>
+            </td>
+            <td>
+              {% if active_count > 0 %}
+                <span class="badge blue">{{ active_count }} produk</span>
+              {% else %}
+                <span class="badge slate">Kosong</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="startEdit({{ c.id }})">✏ Edit</button>
+                {% if active_count == 0 %}
+                <form method="POST" onsubmit="return confirm('Hapus kategori \'{{ c.name }}\'?')">
+                  <input type="hidden" name="action" value="delete"/>
+                  <input type="hidden" name="cat_id" value="{{ c.id }}"/>
+                  <button type="submit" class="btn btn-danger btn-sm">🗑 Hapus</button>
+                </form>
+                {% else %}
+                <button class="btn btn-sm" disabled
+                        style="background:var(--slate-100);color:var(--slate-400);cursor:not-allowed"
+                        title="Ada {{ active_count }} produk aktif — tidak bisa dihapus">🔒 Hapus</button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--slate-400)">Belum ada kategori.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div style="margin-top:12px;padding:11px 14px;background:var(--amber-light);border:1px solid #fde68a;border-radius:8px;font-size:13px;color:#92400e">
+    ⚠ Kategori dengan produk aktif <strong>tidak dapat dihapus</strong>. Nonaktifkan semua produknya terlebih dahulu.
+    Edit nama kategori akan <strong>otomatis sinkron</strong> ke semua produk di dalamnya.
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Produk{% endblock %}
+{% block page_title %}Produk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-heading">Manajemen Produk</div>
+    <div class="page-sub">Kelola seluruh produk sembako Anda</div>
+  </div>
+  {% if session.get('role')=='admin' %}
+  <a href="{{ url_for('add_product') }}" class="btn btn-primary">＋ Tambah Produk</a>
+  {% endif %}
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="padding:12px 16px">
+    <form method="GET" class="filter-bar">
+      <div class="search-bar" style="flex:1;min-width:180px">
+        <span>🔍</span>
+        <input type="text" name="q" value="{{ q }}" placeholder="Cari nama produk..."/>
+      </div>
+      <select name="cat" class="form-control form-select" style="width:auto;min-width:150px">
+        <option value="">Semua Kategori</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}" {% if cat==c.id|string %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="form-control form-select" style="width:auto">
+        <option value="">Semua Status</option>
+        <option value="rendah" {% if stat=='rendah' %}selected{% endif %}>⚠ Stok Rendah</option>
+        <option value="habis"  {% if stat=='habis'  %}selected{% endif %}>🚫 Habis</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <a href="{{ url_for('products') }}" class="btn btn-secondary">Reset</a>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">📋 Daftar Produk ({{ products|length }})</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>SKU</th><th>Nama Produk</th><th>Kategori</th>
+          <th>Stok</th><th>HPP</th><th>Harga Jual</th><th>Margin</th><th>Status</th>
+          {% if session.get('role')=='admin' %}<th>Aksi</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td class="mono" style="color:var(--slate-400)">{{ p.sku }}</td>
+          <td>
+            <div style="font-weight:600">{{ p.name }}</div>
+            {% if p.barcode %}<div class="mono" style="font-size:11px;color:var(--slate-400)">{{ p.barcode }}</div>{% endif %}
+          </td>
+          <td>{{ p.category.name }}</td>
+          <td>
+            <div class="mono" style="font-weight:700">{{ "{:,.2f}".format(p.current_stock) }} {{ p.unit }}</div>
+            <div style="font-size:11px;color:var(--slate-400)">Min: {{ p.min_stock }}</div>
+          </td>
+          <td class="mono">Rp{{ "{:,.0f}".format(p.avg_cost) }}</td>
+          <td class="mono">Rp{{ "{:,.0f}".format(p.selling_price) }}</td>
+          <td style="font-weight:700;color:{% if p.margin_pct>=20 %}var(--green){% elif p.margin_pct>=10 %}var(--amber){% else %}var(--red){% endif %}">
+            {{ p.margin_pct }}%
+          </td>
+          <td>
+            {% if p.stock_status=='aman' %}<span class="badge green">Aman</span>
+            {% elif p.stock_status=='rendah' %}<span class="badge amber">Rendah</span>
+            {% else %}<span class="badge red">Habis</span>{% endif %}
+          </td>
+          {% if session.get('role')=='admin' %}
+          <td>
+            <div class="btn-group">
+              <a href="{{ url_for('edit_product',pid=p.id) }}" class="btn btn-secondary btn-sm">✏</a>
+              <form method="POST" action="{{ url_for('delete_product',pid=p.id) }}"
+                    onsubmit="return confirm('Nonaktifkan {{ p.name }}?')">
+                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center;padding:36px;color:var(--slate-400)">Tidak ada produk ditemukan</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
